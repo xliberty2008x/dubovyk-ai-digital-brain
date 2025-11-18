@@ -1,0 +1,130 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "a8d7c7f8-f2ff-4e10-86f6-2995934f87ce"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -272
+      ],
+      "id": "4a2bcb7f-7448-4034-b56b-58e9bd8b69ac",
+      "name": "MCP Server Trigger",
+      "webhookId": "a8d7c7f8-f2ff-4e10-86f6-2995934f87ce"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "-1002624433868",
+        "file": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Photo', ``, 'string') }}",
+        "additionalFields": {
+          "caption": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Caption', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        -64
+      ],
+      "id": "aab6f954-039e-4d66-919e-e0c5634c8577",
+      "name": "Send a photo message in Telegram",
+      "webhookId": "ef10dcc4-93c1-4c5e-8ba7-c15e238041ee",
+      "credentials": {
+        "telegramApi": {
+          "id": "nuPy09Cns5g4BrhT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "-1002624433868",
+        "file": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Video', ``, 'string') }}",
+        "additionalFields": {
+          "caption": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Caption', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        288,
+        -64
+      ],
+      "id": "f7b2d563-b846-4939-8b3a-e1b2f7c64c97",
+      "name": "Send a video in Telegram",
+      "webhookId": "0890318b-9f07-4a52-9f38-3b4ef1e7dd93",
+      "credentials": {
+        "telegramApi": {
+          "id": "nuPy09Cns5g4BrhT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1002624433868",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        112,
+        -64
+      ],
+      "id": "1aeadbbf-c9b8-488d-81a6-510677c31a76",
+      "name": "Send a text message in Telegram",
+      "webhookId": "260f3182-c028-4919-9fd4-8900a24058cb",
+      "credentials": {
+        "telegramApi": {
+          "id": "nuPy09Cns5g4BrhT",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Send a photo message in Telegram": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a video in Telegram": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message in Telegram": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f36d7c438403224f626bdb742ec922140b9d2a91b8f3e81a3330c84607b002ce"
+  }
+}

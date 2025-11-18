@@ -1,0 +1,118 @@
+[
+    {
+        "update_id": 946663506,
+        "message": {
+            "message_id": 1718,
+            "from": {
+                "id": 166728,
+                "is_bot": false,
+                "first_name": "Kirill Dubovyk",
+                "username": "dbovyk",
+                "language_code": "uk"
+            },
+            "chat": {
+                "id": 166728,
+                "first_name": "Kirill Dubovyk",
+                "username": "dbovyk",
+                "type": "private"
+            },
+            "date": 1758714843,
+            "text": "ти взагалі щось переписуєш? чи ти просто займаєшся перекладом?"
+        }
+    },
+    {
+        "update_id": 946663505,
+        "message": {
+            "message_id": 1716,
+            "from": {
+                "id": 166728,
+                "is_bot": false,
+                "first_name": "Kirill Dubovyk",
+                "username": "dbovyk",
+                "language_code": "uk"
+            },
+            "chat": {
+                "id": 166728,
+                "first_name": "Kirill Dubovyk",
+                "username": "dbovyk",
+                "type": "private"
+            },
+            "date": 1758714790,
+            "forward_origin": {
+                "type": "channel",
+                "chat": {
+                    "id": -1001134760744,
+                    "title": "Метаверсище и ИИще",
+                    "username": "cgevent",
+                    "type": "channel"
+                },
+                "message_id": 13599,
+                "author_signature": "Sergey Tsyptsyn ️️",
+                "date": 1758705280
+            },
+            "forward_from_chat": {
+                "id": -1001134760744,
+                "title": "Метаверсище и ИИще",
+                "username": "cgevent",
+                "type": "channel"
+            },
+            "forward_from_message_id": 13599,
+            "forward_signature": "Sergey Tsyptsyn ️️",
+            "forward_date": 1758705280,
+            "video": {
+                "duration": 6,
+                "width": 1280,
+                "height": 720,
+                "file_name": "🚨_WAKE_UP!!_WAN_2_5_SPEAKS!🚨You_read_that_right,.mp4",
+                "mime_type": "video/mp4",
+                "thumbnail": {
+                    "file_id": "AAMCAgADGQEAAga0aNPbpptcNgwu5YbOxT1ibw_ZYtoAArWHAAJON6FKy6RLDtK2SPEBAAdtAAM2BA",
+                    "file_unique_id": "AQADtYcAAk43oUpy",
+                    "file_size": 14228,
+                    "width": 320,
+                    "height": 180
+                },
+                "thumb": {
+                    "file_id": "AAMCAgADGQEAAga0aNPbpptcNgwu5YbOxT1ibw_ZYtoAArWHAAJON6FKy6RLDtK2SPEBAAdtAAM2BA",
+                    "file_unique_id": "AQADtYcAAk43oUpy",
+                    "file_size": 14228,
+                    "width": 320,
+                    "height": 180
+                },
+                "file_id": "BAACAgIAAxkBAAIGtGjT26abXDYMLuWGzsU9Ym8P2WLaAAK1hwACTjehSsukSw7StkjxNgQ",
+                "file_unique_id": "AgADtYcAAk43oUo",
+                "file_size": 542883
+            },
+            "caption": "Если переводить список новых фич в WAN 2.5, то можно глаза сломать и все равно получится с английского на квазианглийский.\n\nВыделю основные крупные фишки.\nМультимодальность. Поддержка  text, images, video, and audio на входе и ВЫХОДЕ.\nЛипсинк для нескольких персонажей в кадре\nУлучшенное понимание промпта и входных данных, благодаря мультимодальному тренингу\n1080p HD, 10 секунд\nГенерация и РЕДАКТИРОВАНИЕ картинок.\n\n• Architectural Features: Native Multimodality, Deep Alignment\n∘ Native Multimodal Architecture: Adopts a new, unified framework for both understanding and generation, flexibly supporting the input and output of text, images, video, and audio.\n∘ Joint Multimodal Training: Achieves stronger modal alignment by jointly training on text, audio, and visual data—key to enabling audio-visual sync and greatly improved instruction following.\n∘ Human Preference Alignment: Implements Reinforcement Learning from Human Feedback (RLHF) to continuously align with human preferences, enhancing image quality and video dynamics.\n\n• Video Capabilities: A/V Synchronization, Cinematic Quality\n∘ Synchronized A/V Generation: Natively supports high-fidelity, high-consistency video generation with synchronized audio, including multi-person vocals, sound effects, and BGM.\n∘ Controllable Multimodal Input: Supports text, images, and audio as input sources for limitless creativity.\n∘ Cinematic Aesthetics: Features powerful dynamics and structural stability with an upgraded cinematic control system, generating 1080p HD 10s videos of cinematic quality.\n\n• Image Capabilities: Creative & Precise Control\n∘ Advanced Image Generation: Greatly improved instruction following to support photorealistic quality, diverse artistic styles, creative typography, and professional-grade charts.\n∘ Image Editing: Supports conversational, instruction-based image editing and pixel-level precision for tasks like multi-concept fusion, material transformation, and product color swapping, and more.\n\nhttps://wan.video/\n\n@cgevent",
+            "caption_entities": [
+                {
+                    "offset": 416,
+                    "length": 64,
+                    "type": "bold"
+                },
+                {
+                    "offset": 1036,
+                    "length": 61,
+                    "type": "bold"
+                },
+                {
+                    "offset": 1558,
+                    "length": 48,
+                    "type": "bold"
+                },
+                {
+                    "offset": 1988,
+                    "length": 18,
+                    "type": "url"
+                },
+                {
+                    "offset": 2008,
+                    "length": 8,
+                    "type": "mention"
+                }
+            ]
+        },
+        "additional_kwargs": {},
+        "response_metadata": {}
+    }
+]

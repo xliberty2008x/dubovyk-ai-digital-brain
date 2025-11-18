@@ -1,0 +1,272 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 18 * * 5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1152,
+        1280
+      ],
+      "id": "59777da7-1521-49ea-80b6-9e07034164b4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const managerPrompt = [\n  '=== WEEKLY DIGEST MANAGER – SYSTEM RULES ===',\n  'Primary Function: Every Friday, compile up to five standout articles from the past 7 days into a single Ukrainian digest ready for Telegram publication.',\n  '',\n  'Workflow Overview:',\n  '1) Query the Knowledge Graph (Neo4j MCP) for articles ingested within the last 7 days (ORDER BY ingested_at DESC, LIMIT 5).',\n  '2) For each article, call the Copy Writer tool to craft a 1–2 sentence highlight + CTA.',\n  '3) Optionally call the Image Generation Agent once to create a cohesive hero image reflecting the week’s theme.',\n  '4) Assemble a digest post (header + bullet list) using Telegram HTML formatting.',\n  '5) Conclude with CTA and @dubovyk_ai and send via the Telegram MCP client.',\n  '',\n  'Telegram HTML Rules:',\n  '- Allowed tags: <b>, <i>, <u>, <strong>, <em>, <code>, <pre>, <a href=\"https://...\">text</a>, <s>, <span class=\"tg-spoiler\">, <blockquote>.',\n  '- Use newline characters for spacing; DO NOT use <br> or <div>.',\n  '- Escape &, <, > when literal.',\n  '- Every link must be <a href=\"https://...\">опис</a>.',\n  '- Final line: blank line + @dubovyk_ai.',\n  '',\n  'Quality Requirements:',\n  '- Ukrainian language, engaging but concise tone.',\n  '- Mention topics/entities; keep digest under ~400 words.',\n  '- Highlight CTA if any article includes cta_text/link.',\n  '- Reference hero image if generated (mention brand + theme).',\n  '',\n  'Publishing Checklist:',\n  '- Header + date/week range (e.g., \"🔎 Тижневий дайджест Dubovyk AI\").',\n  '- Bullet list for each article (<b>Title</b> + highlight + <a href> link).',\n  '- Optional “CTA of the week” line.',\n  '- Final blank line + @dubovyk_ai.'\n];\n\nconst knowledgeGraphPrompt = [\n  '=== KNOWLEDGE GRAPH ANALYTICS (Neo4j MCP) ===',\n  'Use read_neo4j_cypher to fetch JSON arrays. Query template:',\n  '',\n  'MATCH (a:Article)',\n  'WHERE date(a.ingested_at) >= date() - duration({days:7})',\n  'RETURN a.telegram_message_id AS id, a.title AS title, a.summary AS summary,',\n  '       a.telegram_url AS url, a.topics AS topics,',\n  '       a.cta_text AS cta_text, a.cta_link AS cta_link,',\n  '       a.ingested_at AS ingested_at',\n  'ORDER BY a.ingested_at DESC',\n  'LIMIT 5;',\n  '',\n  'Guidelines:',\n  '- Always JSON.stringify the results array.',\n  '- Never exceed 5 items; include topics/CTA even if empty.',\n  '- If fewer than 5 exist, return whatever is available.'\n];\n\nconst copyWriterPrompt = [\n  '=== COPY WRITER PROMPT ===',\n  'Input JSON: {id, title, summary, url, topics[], cta_text, cta_link}.',\n  'Output JSON: {\"id\": \"...\", \"digest_entry\": \"<b>...</b> ...\"}.',\n  '',\n  'Rules:',\n  '- Highlight ≤2 sentences, Ukrainian, Telegram HTML safe.',\n  '- Start with <b>Title</b> – highlight – <a href=\"url\">посилання</a>.',\n  '- If CTA provided, append a sentence referencing <a href>CTA</a>.',\n  '- Return JSON string only (no prose).'\n];\n\nconst imagePrompt = [\n  '=== IMAGE GENERATION AGENT ===',\n  'Goal: produce one cohesive hero image summarizing the week’s AI highlights + Dubovyk AI branding.',\n  '',\n  'Use Gemini 2.5 Flash image API (Nano Banana Workflow)',\n  'Instructions:',\n  '- Style: modern, cinematic, 16:9, vector‑friendly if possible.',\n  '- Include subtle @dubovyk_ai lettering or logo treatment.',\n  '- Mention top weekly topics (frontier models, multimodality, fine-tuning, etc.).',\n  '- Output: prompt text ready for the JSON above + suggested digest caption.'\n];\n\nreturn [\n  {\n    json: {\n      managerPrompt: managerPrompt.join('\\n'),\n      knowledgeGraphPrompt: knowledgeGraphPrompt.join('\\n'),\n      copyWriterPrompt: copyWriterPrompt.join('\\n'),\n      imagePrompt: imagePrompt.join('\\n')\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        1280
+      ],
+      "id": "cbdbeb6b-85de-41b9-b466-56cd09acbdf5",
+      "name": "Prompt Builder For Manager"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "ab-games-ai",
+          "mode": "list",
+          "cachedResultName": "ab-games-ai"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        1808
+      ],
+      "id": "ad39540b-7b46-41c6-978f-cd1e56009915",
+      "name": "Gemini 2.5 Flash",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "={{ $json.copyWriterPrompt }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        1584
+      ],
+      "id": "492420dc-e805-4bc1-90ba-1e65457d3022",
+      "name": "Copy Writer"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.managerPrompt }}",
+        "options": {
+          "systemMessage": ""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -464,
+        1280
+      ],
+      "id": "6946dded-beb5-47f4-a794-6b1960017771",
+      "name": "Redactor and Publisher"
+    },
+    {
+      "parameters": {
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "=You are a helpful assistant {{ $json.knowledgeGraphPrompt }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        -256,
+        1584
+      ],
+      "id": "219be189-8561-4982-a2fa-8ffd6b57a9d9",
+      "name": "Knowledge Graph Analytics"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://mcp-neo4j-cypher-858161250402.us-central1.run.app/api/mcp/",
+        "include": "selected",
+        "includeTools": [
+          "get_neo4j_schema",
+          "read_neo4j_cypher"
+        ],
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        1792
+      ],
+      "id": "bfbad4f5-b436-443e-bb9f-ca51df3313b7",
+      "name": "neo4j"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.dubovyk.com/mcp/a8d7c7f8-f2ff-4e10-86f6-2995934f87ce",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        1408
+      ],
+      "id": "60cab501-845c-4fa0-b221-4ab6ae46302f",
+      "name": "MCP Client2"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "ab-games-ai",
+          "mode": "list",
+          "cachedResultName": "ab-games-ai"
+        },
+        "modelName": "claude-sonnet-4-5@20250929",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        1456
+      ],
+      "id": "81ff3e7f-ef78-44b6-a91f-8424df171256",
+      "name": "Sonnet 4.",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prompt Builder For Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt Builder For Manager": {
+      "main": [
+        [
+          {
+            "node": "Redactor and Publisher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2.5 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Copy Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Knowledge Graph Analytics",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy Writer": {
+      "ai_tool": [
+        [
+          {
+            "node": "Redactor and Publisher",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledge Graph Analytics": {
+      "ai_tool": [
+        [
+          {
+            "node": "Redactor and Publisher",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "neo4j": {
+      "ai_tool": [
+        [
+          {
+            "node": "Knowledge Graph Analytics",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Redactor and Publisher",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sonnet 4.": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redactor and Publisher",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f36d7c438403224f626bdb742ec922140b9d2a91b8f3e81a3330c84607b002ce"
+  }
+}

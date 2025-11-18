@@ -1,0 +1,490 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -864,
+        -32
+      ],
+      "id": "11597394-dbfa-43e0-a44a-c9b1c8127d57",
+      "name": "Telegram Trigger",
+      "webhookId": "f7deaf85-73c5-4ac7-be8b-df05b8afc5fa",
+      "credentials": {
+        "telegramApi": {
+          "id": "nuPy09Cns5g4BrhT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1216,
+        -32
+      ],
+      "id": "08e0f5f2-57e4-4849-bea6-e22b279263d1",
+      "name": "Send private message",
+      "webhookId": "6de53484-e358-4e2c-a459-50ce9f37413d",
+      "credentials": {
+        "telegramApi": {
+          "id": "nuPy09Cns5g4BrhT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Structured Content Extractor\nconst items = $input.all();\n\nreturn items.map(item => {\n  const input = item.json;\n  const result = {\n    article: {\n      telegramMessageId: input?.message?.message_id ?? input?.contentSummary?.messageId ?? null,\n      channelId: input?.message?.chat?.id ?? input?.contentSummary?.chatId ?? null,\n      rawText: '',\n      mediaType: null,\n      mediaFileId: null,\n    },\n    metadata: [],\n  };\n\n  // 1. Extract main text/caption\n  if (input?.contentSummary) {\n    result.article.rawText =\n      input.contentSummary.text ??\n      input.contentSummary.caption ??\n      '';\n  } else if (input?.message) {\n    const msg = input.message;\n    result.article.rawText = msg.text ?? msg.caption ?? '';\n  }\n\n  // 2. Extract media info\n  const attachMeta = (fileId, mediaType) => {\n    result.article.mediaFileId = fileId;\n    result.article.mediaType = mediaType;\n    result.metadata.push(`FILE_ID: ${fileId}`);\n    result.metadata.push(`MEDIA_TYPE: ${mediaType}`);\n  };\n\n  if (input?.contentSummary?.hasMedia) {\n    const mediaType = input.contentSummary.mediaType ?? 'media';\n    const fileId =\n      input.media?.fileId ??\n      input.media?.largestPhoto?.file_id ??\n      null;\n    if (fileId) attachMeta(fileId, mediaType);\n  } else if (input?.message) {\n    const msg = input.message;\n    if (msg.video) attachMeta(msg.video.file_id, 'video');\n    else if (msg.photo?.length) {\n      const largest = msg.photo[msg.photo.length - 1];\n      attachMeta(largest.file_id, 'photo');\n    } else if (msg.document) attachMeta(msg.document.file_id, 'document');\n    else if (msg.audio) attachMeta(msg.audio.file_id, 'audio');\n  }\n\n  return { json: result };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        -32
+      ],
+      "id": "6abaa701-c3a7-4cff-bb0c-9cf0d7a56456",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.agentPrompt }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": ""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -32
+      ],
+      "id": "1aa31cb5-8aed-4d29-86f2-df7450000fc4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}\n",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        992,
+        208
+      ],
+      "id": "61e6abcf-0032-4646-b3f1-0655a53070be",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.dubovyk.com/mcp/a8d7c7f8-f2ff-4e10-86f6-2995934f87ce",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        208
+      ],
+      "id": "799fc950-b297-4393-b1e5-845cc5e3e2b8",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "ab-games-ai",
+          "mode": "list",
+          "cachedResultName": "ab-games-ai"
+        },
+        "modelName": "gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        864,
+        208
+      ],
+      "id": "f344b973-465d-4925-b0ed-8c6fa4109b17",
+      "name": "Gemini 2.5 PRO",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "ab-games-ai",
+          "mode": "list",
+          "cachedResultName": "ab-games-ai"
+        },
+        "modelName": "claude-sonnet-4-5@20250929",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        720,
+        208
+      ],
+      "id": "8cf5ac06-fcb5-48e5-b92f-9b65dab94f76",
+      "name": "Sonnet 4.5",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [\n      {\n        \"text\": $json.article.rawText ?? \"\"\n      }\n    ]\n  }\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -80,
+        -240
+      ],
+      "id": "f61c8785-e1ed-46ce-8033-ba522877c914",
+      "name": "Embedding Builder",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        },
+        "httpHeaderAuth": {
+          "id": "QaoZc4lhxvO1qd5h",
+          "name": "Google Dubovyk"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://1a1e5411.databases.neo4j.io/db/neo4j/query/v2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        304,
+        -240
+      ],
+      "id": "6de46586-bca5-4d6b-b766-145b84b5a2d3",
+      "name": "Duplicate Query (Neo4j Query API)",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uwl1PLVTKqNJb4Py",
+          "name": "Dubovyk Neo4j"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const DEFAULT_LIMIT = 5;\nconst DEFAULT_MIN_SCORE = 0.9;\n\nconst STATEMENT = [\n  \"CALL db.index.vector.queryNodes('article_embedding_idx', $limit, $embedding)\",\n  \"YIELD node, score\",\n  \"WHERE toString(node.telegram_message_id) <> toString($telegram_message_id)\",\n  \"  AND score >= $min_score\",\n  \"RETURN node.telegram_message_id AS telegram_message_id,\",\n  \"       node.title AS title,\",\n  \"       node.telegram_url AS telegram_url,\",\n  \"       score\",\n  \"ORDER BY score DESC\"\n].join(\"\\n\");\n\nconst upstream = $('Code in JavaScript').first().json.article ?? {};\nconst rawItems = $input.all();\n\nreturn rawItems.map(item => {\n  const embedding = item.json.embedding;\n  const values = Array.isArray(embedding?.values) ? embedding.values.map(Number) : [];\n\n  if (!values.length) {\n    throw new Error('Embedding Builder returned no values; cannot query Neo4j.');\n  }\n\n  return {\n    json: {\n      statement: STATEMENT,\n      parameters: {\n        limit: Number($env.TOP_K ?? DEFAULT_LIMIT),\n        min_score: Number($env.MIN_DUP_SCORE ?? DEFAULT_MIN_SCORE),\n        embedding: values,\n        telegram_message_id: String(upstream.telegramMessageId ?? '')\n      }\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        -240
+      ],
+      "id": "56a56e90-7761-4bdc-9077-f6534e9cd7a7",
+      "name": "Query Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const upstream = $('Code in JavaScript').first().json ?? {};\nconst article = upstream.article ?? {};\nconst metadata = upstream.metadata ?? [];\n\n// Normalize Neo4j Query API response → duplicateMatches[]\nconst fields = $json.data?.fields ?? [];\nconst values = $json.data?.values ?? [];\nconst idx = Object.fromEntries(fields.map((name, i) => [name, i]));\n\nconst duplicateMatches = values.map(row => ({\n  telegram_message_id: row[idx.telegram_message_id] ?? null,\n  title: row[idx.title] ?? null,\n  telegram_url: row[idx.telegram_url] ?? null,\n  score: row[idx.score] ?? null,\n}));\n\nconst topMatch = duplicateMatches[0];\n\nconst sections = [];\n\n// Full system prompt (hardcoded previously in LLM node)\nsections.push(\n  '=== SYSTEM ROLE & RULES ===',\n  'Primary Function: You are a sophisticated content adaptation and transformation assistant that processes Telegram messages and creates engaging Ukrainian content for posting. You handle all types of Telegram content including text, media, forwarded messages, and multimedia content.',\n  '',\n  'Input Format:',\n  '- type, hasText, hasMedia, hasCaption, isForwarded',\n  '- text/caption/mediaType/fromUser',\n  '',\n  'Content Processing Rules:',\n  '1. Output language is Ukrainian unless explicitly requested otherwise.',\n  '2. Adapt content based on type (text, media captions, forwards, media without captions).',\n  '3. Style: conversational Ukrainian, tasteful emojis, remove unnecessary hashtags/branding, explain technical content.',\n  '4. Enhance readability, add context when needed, preserve meaning, clarify technical points.',\n  '',\n  'Media Handling: describe videos/photos/audio/documents when helpful; prioritize captions.',\n  'Forwarded Content: acknowledge source only if it adds value; adapt to audience.',\n  '',\n  'Output Format:',\n  '- Provide clean Ukrainian copy ready for Telegram.',\n  '- No metadata or tool chatter.',\n  '- Keep posts concise and readable.',\n  '',\n  'Quality Assurance:',\n  '- Grammar checked, technical terms accurate, tone appropriate, info preserved.',\n  '',\n  'User Interaction Protocol:',\n  '- ALWAYS ask for approval before posting. Present final draft and wait for confirmation.',\n  '- Ask clarifying questions if needed, explain options when unsure, prioritize intent.',\n  '',\n  'Link Formatting:',\n  '- Convert bare URLs into [text](url) hyperlinks.',\n  '- Ensure links are functional.',\n  '',\n  'Channel Attribution:',\n  '- Always append a blank line + \"@dubovyk_ai\" at the end.',\n  '',\n  'Content Duplication Prevention:',\n  '- Never repost identical content. If similarity detected, warn user, suggest alternatives, or decline.',\n  '',\n  'Posting Workflow:',\n  '1) Adapt content per rules',\n  '2) Format links',\n  '3) Add @dubovyk_ai',\n  '4) Present final content',\n  '5) WAIT for approval',\n  '6) Only post after approval',\n  ''\n);\n\n// Content payload\nsections.push(\n  '=== CONTENT FOR REPOSTING ===',\n  article.rawText || '[No text content]',\n  ''\n);\n\n// Metadata/context\nsections.push(\n  '=== METADATA FOR TOOLS (DO NOT INCLUDE IN FINAL TEXT) ===',\n  metadata.length ? metadata.join('\\n') : '[No metadata]',\n  ''\n);\n\n// Duplicate awareness\nif (topMatch) {\n  sections.push(\n    '=== POSSIBLE DUPLICATE DETECTED ===',\n    `Existing article: ${topMatch.title || '(untitled)'}`,\n    `Telegram URL: ${topMatch.telegram_url || 'N/A'}`,\n    `Similarity score: ${topMatch.score ?? 'N/A'}`,\n    'Alert the user/editor about this possible duplicate before any reposting.',\n    ''\n  );\n} else {\n  sections.push(\n    '=== POSSIBLE DUPLICATE DETECTED ===',\n    '[No similar articles above threshold]',\n    ''\n  );\n}\n\n// Action reminders\nsections.push(\n  '=== ACTION ITEMS ===',\n  '- Produce Ukrainian draft obeying the rules above.',\n  '- Present draft + duplicate warning to user and await approval.',\n  '- Be ready to revise if user flags duplication.',\n  ''\n);\n\nreturn [\n  {\n    json: {\n      ...$json,\n      duplicateMatches,\n      article,\n      metadata,\n      agentPrompt: sections.join('\\n'),\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -32
+      ],
+      "id": "0e605c70-a437-4130-b691-f456e801f109",
+      "name": "PromptBuilder"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2aa8d594-5e73-4324-850c-93d29266db72",
+              "leftValue": "={{ (($json.article?.rawText ?? '')).trim().length() }}",
+              "rightValue": 120,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -384,
+        -32
+      ],
+      "id": "229d067b-5c36-49b3-87db-9077ae77b348",
+      "name": "If"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send private message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2.5 PRO": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sonnet 4.5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding Builder": {
+      "main": [
+        [
+          {
+            "node": "Query Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Query (Neo4j Query API)": {
+      "main": [
+        [
+          {
+            "node": "PromptBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Builder": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Query (Neo4j Query API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PromptBuilder": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Embedding Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PromptBuilder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "update_id": 946663507,
+        "message": {
+          "message_id": 1719,
+          "from": {
+            "id": 166728,
+            "is_bot": false,
+            "first_name": "Kirill Dubovyk",
+            "username": "dbovyk",
+            "language_code": "uk"
+          },
+          "chat": {
+            "id": 166728,
+            "first_name": "Kirill Dubovyk",
+            "username": "dbovyk",
+            "type": "private"
+          },
+          "date": 1758742208,
+          "forward_origin": {
+            "type": "user",
+            "sender_user": {
+              "id": 6508916319,
+              "is_bot": true,
+              "first_name": "Kir Dubovyk Lab",
+              "username": "dbovyk_bot"
+            },
+            "date": 1758714800
+          },
+          "forward_from": {
+            "id": 6508916319,
+            "is_bot": true,
+            "first_name": "Kir Dubovyk Lab",
+            "username": "dbovyk_bot"
+          },
+          "forward_date": 1758714800,
+          "text": "Ось український драфт для підпису до цього відео:\n\nWAN 2.5: переклад списку нових фішок ламає очі — від англійської до квазі-англійської. Виокремлю ключові моменти.\n\nМультимодальність: підтримка тексту, зображень, відео та аудіо на вході й виході.  \nЛіпсінк для кількох персонажів у кадрі.  \nПокращене розуміння промптів та вхідних даних завдяки мультимодальному тренуванню.  \n1080p HD, 10 секунд.  \nГенерація та редагування зображень.\n\n• Архітектурні особливості: Нативна мультимодальність, глибока алігнація  \n∘ Нативна мультимодальна архітектура: Новий уніфікований фреймворк для розуміння та генерації, гнучко підтримує вхід/вихід тексту, зображень, відео та аудіо.  \n∘ Спільне мультимодальне тренування: Покращена алігнація модальностей завдяки спільному тренуванню на текстових, аудіо- та візуальних даних — ключ до аудіовізуальної синхронізації та кращого виконання інструкцій.  \n∘ Алігнація з людськими уподобаннями: Використовує RLHF (Reinforcement Learning from Human Feedback) для постійної адаптації до людських переваг, покращуючи якість зображень та динаміку відео.\n\n• Можливості відео: Аудіовізуальна синхронізація, кінематографічна якість  \n∘ Синхронізована генерація А/В: Нативно підтримує високофідельну, висококонсистентну генерацію відео з синхронізованим аудіо, включаючи вокал кількох осіб, звукові ефекти та BGM.  \n∘ Керування мультимодальним входом: Підтримує текст, зображення та аудіо як джерела для безмежної креативності.  \n∘ Кінематографічна естетика: Потужна динаміка та структурна стабільність з оновленою системою контролю, генерує 1080p HD відео тривалістю 10 с кінематографічної якості.\n\n• Можливості зображень: Креативний та точний контроль  \n∘ Просунута генерація зображень: Значно покращене виконання інструкцій для фотореалістичної якості, різноманітних художніх стилів, креативної типографіки та професійних графіків.  \n∘ Редагування зображень: Підтримує розмовне, інструкційне редагування з піксельною точністю для завдань на кшталт злиття концептів, трансформації матеріалів, зміни кольорів продуктів тощо.\n\nДеталі: https://wan.video/\n\n#dubovykai\n\nПідтвердіть цей текст для публікації або повідомте, якщо потрібні зміни.\n\nThis message was sent automatically with n8n",
+          "entities": [
+            {
+              "offset": 2057,
+              "length": 18,
+              "type": "url"
+            },
+            {
+              "offset": 2077,
+              "length": 10,
+              "type": "hashtag"
+            },
+            {
+              "offset": 2163,
+              "length": 41,
+              "type": "italic"
+            },
+            {
+              "offset": 2204,
+              "length": 3,
+              "type": "text_link",
+              "url": "https://n8n.io/?utm_source=n8n-internal&utm_medium=powered_by&utm_campaign=n8n-nodes-base.telegram_dd621d49574d9c754971eab8cb28bfabc964b7266fd0bd16ddb59c39f9ddfee1"
+            }
+          ],
+          "link_preview_options": {
+            "is_disabled": true
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f36d7c438403224f626bdb742ec922140b9d2a91b8f3e81a3330c84607b002ce"
+  }
+}

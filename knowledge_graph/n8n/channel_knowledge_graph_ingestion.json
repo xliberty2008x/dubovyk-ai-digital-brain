@@ -1,0 +1,404 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const input = item.json ?? {};\n\n  const source =\n    input.channel_post ??\n    input.message ??\n    input.contentSummary ??\n    {};\n\n  const chat = source.chat ?? input.message?.chat ?? input.channel_post?.chat ?? {};\n  const senderChat = source.sender_chat ?? {};\n  const channelUsername = chat.username ?? senderChat.username ?? '';\n\n  const article = {\n    telegramMessageId:\n      source.message_id ??\n      source.messageId ??\n      input.message?.message_id ??\n      input.contentSummary?.messageId ??\n      null,\n    channelId:\n      chat.id ??\n      input.message?.chat?.id ??\n      input.contentSummary?.chatId ??\n      null,\n    channelUsername,\n    channelTitle: chat.title ?? senderChat.title ?? null,\n    rawText: source.text ?? source.caption ?? '',\n    mediaType: null,\n    mediaFileId: null,\n  };\n\n  const metadata = [];\n  if (channelUsername) metadata.push(`CHANNEL_USERNAME: @${channelUsername}`);\n  if (article.channelTitle) metadata.push(`CHANNEL_TITLE: ${article.channelTitle}`);\n\n  const attachMeta = (fileId, mediaType) => {\n    if (!fileId) return;\n    article.mediaFileId = fileId;\n    article.mediaType = mediaType;\n    metadata.push(`FILE_ID: ${fileId}`);\n    metadata.push(`MEDIA_TYPE: ${mediaType}`);\n  };\n\n  if (input.contentSummary?.hasMedia) {\n    const mediaType = input.contentSummary.mediaType ?? 'media';\n    const fileId = input.media?.fileId ?? input.media?.largestPhoto?.file_id ?? null;\n    attachMeta(fileId, mediaType);\n  } else if (Array.isArray(source.photo) && source.photo.length) {\n    const largest = source.photo[source.photo.length - 1];\n    attachMeta(largest.file_id, 'photo');\n  } else if (source.video) {\n    attachMeta(source.video.file_id, 'video');\n  } else if (source.document) {\n    attachMeta(source.document.file_id, 'document');\n  } else if (source.audio) {\n    attachMeta(source.audio.file_id, 'audio');\n  }\n\n  if (!article.rawText && input.contentSummary) {\n    article.rawText =\n      input.contentSummary.text ??\n      input.contentSummary.caption ??\n      '';\n  }\n\n  article.telegramUrl =\n    article.channelUsername && article.telegramMessageId\n      ? `https://t.me/${article.channelUsername}/${article.telegramMessageId}`\n      : null;\n\n  return { json: { article, metadata } };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1792,
+        -64
+      ],
+      "id": "ca18af2f-2baa-44d1-b147-3cd62d4f1716",
+      "name": "Code in JavaScript Normalize"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [\n      {\n        \"text\":$('Code in JavaScript Normalize').item.json.article.rawText  ?? \"\"\n      }\n    ]\n  }\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1248,
+        -320
+      ],
+      "id": "57bd7def-6ea3-4209-8d4f-28e02962c8e2",
+      "name": "Embedding Builder1",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        },
+        "httpHeaderAuth": {
+          "id": "QaoZc4lhxvO1qd5h",
+          "name": "Google Dubovyk"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.agentPrompt }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1136,
+        16
+      ],
+      "id": "f81365ce-1a54-4e47-b710-a811516e5c50",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "ab-games-ai",
+          "mode": "list",
+          "cachedResultName": "ab-games-ai"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        -1296,
+        240
+      ],
+      "id": "866556ad-140b-42ea-b40d-0a477a030be2",
+      "name": "Google Vertex Chat Model",
+      "credentials": {
+        "googleApi": {
+          "id": "B5Zp5EcXgfCWjW9c",
+          "name": "AB GAMES"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"title\": { \"type\": \"string\" },\n    \"summary\": { \"type\": \"string\" },\n    \"topics\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" },\n      \"maxItems\": 3\n    },\n    \"topicDecisionRequired\": { \"type\": \"boolean\" },\n    \"suggestedTopic\": { \"type\": \"string\" },\n    \"tags\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" },\n      \"maxItems\": 6\n    },\n    \"entities\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"name\": { \"type\": \"string\" },\n          \"entityType\": {\n            \"type\": \"string\",\n            \"enum\": [\"person\", \"company\", \"project\", \"technology\", \"other\"]\n          }\n        },\n        \"required\": [\"name\", \"entityType\"]\n      }\n    },\n    \"ctaText\": { \"type\": \"string\" },\n    \"ctaLink\": { \"type\": \"string\" }\n  },\n  \"required\": [\n    \"title\",\n    \"summary\",\n    \"topics\",\n    \"topicDecisionRequired\",\n    \"suggestedTopic\",\n    \"tags\",\n    \"entities\",\n    \"ctaText\",\n    \"ctaLink\"\n  ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -992,
+        240
+      ],
+      "id": "91835926-2693-4e23-bd35-ab01eb0ee62e",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const article = $json.article ?? {};\nconst metadata = $json.metadata ?? [];\nconst content = (article.rawText || '').trim();\n\nconst ALLOWED_TOPICS = [\n  'agentic_ai',\n  'model_context_protocol',\n  'frontier_models',\n  'multimodality',\n  'retrieval_augmented_generation',\n  'fine_tuning_and_customization',\n  'developer_tools_and_frameworks',\n  'ai_hardware_and_infrastructure',\n  'open_source_ecosystem',\n  'enterprise_ai_and_automation',\n  'responsible_ai_and_governance'\n];\n\nconst schemaDescription = `\nReturn JSON matching:\n{\n  \"title\": string,\n  \"summary\": string,\n  \"topics\": string[],\n  \"topicDecisionRequired\": boolean,\n  \"suggestedTopic\": string,\n  \"tags\": string[],\n  \"entities\": [{ \"name\": string, \"entityType\": \"person|company|project|technology|other\" }],\n  \"ctaText\": string,\n  \"ctaLink\": string\n}\nRules:\n- title/summary must be Ukrainian text (no placeholders).\n- topics: choose up to 3 EXACT values from ${ALLOWED_TOPICS.join(', ')}.\n- If none apply, return topics=[] and topicDecisionRequired=true, and set suggestedTopic to your best new label (or empty string if truly unsure). Otherwise topics ≠ [] and topicDecisionRequired=false, suggestedTopic=\"\".\n- tags: ≤6 lowercase keywords/hashtags, deduplicated.\n- entities: only real entities, use the allowed entityType values.\n- CTA fields empty when absent.\n- Respond with JSON only.`.trim();\n\nconst sections = [\n  '=== METADATA EXTRACTION TASK ===',\n  schemaDescription,\n  '',\n  '=== ARTICLE CONTENT ===',\n  content || '[No text content]',\n  '',\n  '=== MEDIA CONTEXT ===',\n  metadata.length ? metadata.join('\\n') : '[No media metadata]',\n  '',\n  'Generate the JSON per schema with valid UTF-8 and no extra commentary.'\n];\n\nreturn [\n  {\n    json: {\n      ...$json,\n      agentPrompt: sections.join('\\n'),\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        -64
+      ],
+      "id": "b2d8c1ca-3926-4b89-bf01-97ea0f330125",
+      "name": "Prompt Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const article = $json.article ?? {};\nconst embeddingValues =\n  $json.embedding?.values ??\n  $json.embedding ??\n  [];\nconst metadata = $json.output ?? {};\n\nif (!article.telegramMessageId) {\n  throw new Error('article.telegramMessageId missing before Neo4j write.');\n}\nif (!embeddingValues.length) {\n  throw new Error('embedding values missing before Neo4j write.');\n}\n\nconst topics = Array.isArray(metadata.topics) ? metadata.topics : [];\nconst tags = Array.isArray(metadata.tags) ? metadata.tags : [];\nconst entities = Array.isArray(metadata.entities) ? metadata.entities : [];\n\nconst entityNames = entities.map(e => String(e.name || '')).filter(Boolean);\nconst entityTypes = entities.map(e => String(e.entityType || '')).filter(Boolean);\n\nconst channelUsername = article.channelUsername ?? '';\nconst telegramUrl =\n  channelUsername && article.telegramMessageId\n    ? `https://t.me/${channelUsername}/${article.telegramMessageId}`\n    : null;\n\nconst statement = `\nMERGE (c:Channel {id: $channel_id})\n  ON CREATE SET c.username = $channel_username\nSET c.title = $channel_title\n\nMERGE (a:Article {telegram_message_id: $telegram_message_id})\nSET a.channel_id = $channel_id,\n    a.channel_username = $channel_username,\n    a.telegram_url = coalesce($telegram_url, a.telegram_url),\n    a.raw_text = $raw_text,\n    a.media_type = $media_type,\n    a.media_file_id = $media_file_id,\n    a.embedding = $embedding,\n    a.title = $title,\n    a.summary = $summary,\n    a.topics = $topics,\n    a.tags = $tags,\n    a.entity_names = $entity_names,\n    a.entity_types = $entity_types,\n    a.cta_text = $cta_text,\n    a.cta_link = $cta_link,\n    a.topic_decision_required = $topic_decision_required,\n    a.suggested_topic = $suggested_topic,\n    a.ingested_at = datetime()\nMERGE (c)-[:PUBLISHED]->(a)\nRETURN a.telegram_message_id AS telegram_message_id\n`.trim();\n\nreturn [\n  {\n    json: {\n      statement,\n      parameters: {\n        telegram_message_id: String(article.telegramMessageId ?? ''),\n        channel_id: String(article.channelId ?? ''),\n        channel_title: article.channelTitle ?? null,\n        channel_username: channelUsername,\n        telegram_url: telegramUrl,\n        raw_text: article.rawText ?? '',\n        media_type: article.mediaType ?? null,\n        media_file_id: article.mediaFileId ?? null,\n        embedding: embeddingValues.map(Number),\n        title: metadata.title ?? '',\n        summary: metadata.summary ?? '',\n        topics,\n        tags,\n        entity_names: entityNames,\n        entity_types: entityTypes,\n        cta_text: metadata.ctaText ?? '',\n        cta_link: metadata.ctaLink ?? '',\n        topic_decision_required: Boolean(metadata.topicDecisionRequired),\n        suggested_topic: metadata.suggestedTopic ?? ''\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        -80
+      ],
+      "id": "36a040a5-bb86-445d-b518-9a5b4dbf1031",
+      "name": "Query Builder1"
+    },
+    {
+      "parameters": {
+        "chatId": "=166728",
+        "text": "={{ \n'✅ Ingested article: ' + $('Merge').item.json.output.title + '\\n' +\n'Topics: ' + (($('Merge').item.json.output.topics || [])\n  .map(t => '<code>' + t + '</code>')\n  .join(', ') || '—') + '\\n' +\n'Link: ' + ($('Merge').item.json.article?.telegramUrl || 'n/a')\n}}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "eae5764a-c6d5-47e9-9f47-c06cb7cd6de7",
+      "name": "Send the Message of the Append Result",
+      "webhookId": "6de53484-e358-4e2c-a459-50ce9f37413d",
+      "credentials": {
+        "telegramApi": {
+          "id": "nuPy09Cns5g4BrhT",
+          "name": "@dbovyk_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "channel_post"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2048,
+        -64
+      ],
+      "id": "d771c229-92a1-4e97-97d1-3214b231c8f1",
+      "name": "On Channel Post",
+      "webhookId": "df0426c5-d863-4728-823e-891dbe3ba960",
+      "credentials": {
+        "telegramApi": {
+          "id": "xo4S6AqSrdIkcmJP",
+          "name": "@wwae_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -736,
+        -96
+      ],
+      "id": "979230e6-69a3-402c-a5bb-0a558ec69484",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://1a1e5411.databases.neo4j.io/db/neo4j/query/v2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -240,
+        -80
+      ],
+      "id": "806ec2a1-0792-4a0f-a63d-59e18a1b74f5",
+      "name": "Neo4j Upsert Article",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "uwl1PLVTKqNJb4Py",
+          "name": "Dubovyk Neo4j"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Code in JavaScript Normalize": {
+      "main": [
+        [
+          {
+            "node": "Prompt Builder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Embedding Builder1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding Builder1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Builder1": {
+      "main": [
+        [
+          {
+            "node": "Neo4j Upsert Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Channel Post": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Query Builder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neo4j Upsert Article": {
+      "main": [
+        [
+          {
+            "node": "Send the Message of the Append Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "On Channel Post": [
+      {
+        "update_id": 366400470,
+        "channel_post": {
+          "message_id": 259,
+          "sender_chat": {
+            "id": -1002624433868,
+            "title": "dubovyk ai",
+            "username": "dubovyk_ai",
+            "type": "channel"
+          },
+          "chat": {
+            "id": -1002624433868,
+            "title": "dubovyk ai",
+            "username": "dubovyk_ai",
+            "type": "channel"
+          },
+          "date": 1763408094,
+          "photo": [
+            {
+              "file_id": "AgACAgIAAyEFAAScba7MAAIBA2kbeN5O05_8SYgpKL8RtxrOFYqRAAK1DmsbWqfZSFnBkwSMKA2AAQADAgADcwADNgQ",
+              "file_unique_id": "AQADtQ5rG1qn2Uh4",
+              "file_size": 1462,
+              "width": 90,
+              "height": 82
+            },
+            {
+              "file_id": "AgACAgIAAyEFAAScba7MAAIBA2kbeN5O05_8SYgpKL8RtxrOFYqRAAK1DmsbWqfZSFnBkwSMKA2AAQADAgADbQADNgQ",
+              "file_unique_id": "AQADtQ5rG1qn2Uhy",
+              "file_size": 19581,
+              "width": 320,
+              "height": 291
+            },
+            {
+              "file_id": "AgACAgIAAyEFAAScba7MAAIBA2kbeN5O05_8SYgpKL8RtxrOFYqRAAK1DmsbWqfZSFnBkwSMKA2AAQADAgADeAADNgQ",
+              "file_unique_id": "AQADtQ5rG1qn2Uh9",
+              "file_size": 88024,
+              "width": 800,
+              "height": 728
+            },
+            {
+              "file_id": "AgACAgIAAyEFAAScba7MAAIBA2kbeN5O05_8SYgpKL8RtxrOFYqRAAK1DmsbWqfZSFnBkwSMKA2AAQADAgADeQADNgQ",
+              "file_unique_id": "AQADtQ5rG1qn2Uh-",
+              "file_size": 121080,
+              "width": 1080,
+              "height": 983
+            }
+          ],
+          "caption": "⚛️ Китайські вчені створили першу \"квантову LLM\"\n\nКоманда з Китаю представила HyQuT — гібридну мовну модель на основі трансформера, де частину класичних обчислень замінили квантовими схемами.\n\n**Як це працює?**\nЗамість звичайного перемноження матриць у \"квантових шарах\" використовують повороти кубітів. Схема з 10 кубітів і близько 80 вентилів дозволила замінити понад 10% класичних параметрів у моделі на 150 млн параметрів, при цьому якість генерації тексту залишилася на тому ж рівні.\n\n**Чи це прорив?**\nПоки що ні. Про практичну цінність або \"квантову перевагу\" говорити зарано. Але дослідники підкреслюють, що квантові обчислення для обробки мови — перспективний напрямок, який може допомогти подолати обмеження масштабованості сучасних LLM.\n\n💡 Можливо, саме квантові обчислення стануть наступним кроком еволюції великих мовних моделей.\n\n@dubovyk_ai",
+          "caption_entities": [
+            {
+              "offset": 845,
+              "length": 11,
+              "type": "mention"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "meta": {
+    "instanceId": "f36d7c438403224f626bdb742ec922140b9d2a91b8f3e81a3330c84607b002ce"
+  }
+}

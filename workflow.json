@@ -1,0 +1,305 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4.1",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        1120
+      ],
+      "id": "0e35fbf7-7e2f-4809-bdb3-62a1a14c2268",
+      "name": "Azure OpenAI Chat Model",
+      "credentials": {
+        "azureOpenAiApi": {
+          "id": "HskD7iLKFYYcC3oM",
+          "name": "Reasoning Models"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1088,
+        848
+      ],
+      "id": "3ee59e0a-eede-4151-a258-8df35035e156",
+      "name": "Telegram Trigger",
+      "webhookId": "f7deaf85-73c5-4ac7-be8b-df05b8afc5fa",
+      "credentials": {
+        "telegramApi": {
+          "id": "tLgw3mO77UrE5Zmr",
+          "name": "dbovyk_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "https://n8n.big-sister.ai/mcp/7d497ed9-3600-4f57-aa99-5f4b676f90e9/sse",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        1120
+      ],
+      "id": "2178bc2e-1055-45c6-b2ad-dccadb5edb77",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        848
+      ],
+      "id": "14536988-ac1d-4bd6-862f-f3fcdb7a92a3",
+      "name": "Send private message",
+      "webhookId": "6de53484-e358-4e2c-a459-50ce9f37413d",
+      "credentials": {
+        "telegramApi": {
+          "id": "tLgw3mO77UrE5Zmr",
+          "name": "dbovyk_bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "x-ai/grok-4-fast:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        1120
+      ],
+      "id": "266d35ae-d334-45d7-b23e-4009091c1e80",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "vPWcoLKP0n3TalEO",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Content Extractor Transform Node for AI Copywriter\n// Separates content for LLM processing and metadata for tool use\n// Formats as RAW TEXT to prevent memory issues\n\nconst items = $input.all();\n\nreturn items.map(item => {\n    const input = item.json;\n    \n    // Initialize separate sections\n    let mainContent = '';\n    const metadata = [];\n    \n    // Check if this is from Enhanced Telegram Parser\n    if (input && input.contentSummary) {\n        // Extract main content (text or caption) for LLM processing\n        if (input.contentSummary.text) {\n            mainContent = input.contentSummary.text;\n        } else if (input.contentSummary.caption) {\n            mainContent = input.contentSummary.caption;\n        }\n        \n        // Add media metadata for tool use (not for final text)\n        if (input.media) {\n            if (input.media.fileId) {\n                metadata.push(`FILE_ID: ${input.media.fileId}`);\n            } else if (input.media.largestPhoto?.file_id) {\n                metadata.push(`FILE_ID: ${input.media.largestPhoto.file_id}`);\n            }\n        }\n        \n        // Add media type for tool context\n        if (input.contentSummary.hasMedia && input.contentSummary.mediaType) {\n            metadata.push(`MEDIA_TYPE: ${input.contentSummary.mediaType}`);\n        }\n    }\n    \n    // Fallback: Process raw Telegram data if no contentSummary\n    else if (input && input.message) {\n        const msg = input.message;\n        \n        // Extract main content for LLM processing\n        if (msg.text) {\n            mainContent = msg.text;\n        } else if (msg.caption) {\n            mainContent = msg.caption;\n        }\n        \n        // Extract media metadata for tool use\n        if (msg.video) {\n            metadata.push(`FILE_ID: ${msg.video.file_id}`);\n            metadata.push(`MEDIA_TYPE: video`);\n        } else if (msg.photo && msg.photo.length > 0) {\n            const largestPhoto = msg.photo[msg.photo.length - 1];\n            metadata.push(`FILE_ID: ${largestPhoto.file_id}`);\n            metadata.push(`MEDIA_TYPE: photo`);\n        } else if (msg.document) {\n            metadata.push(`FILE_ID: ${msg.document.file_id}`);\n            metadata.push(`MEDIA_TYPE: document`);\n        } else if (msg.audio) {\n            metadata.push(`FILE_ID: ${msg.audio.file_id}`);\n            metadata.push(`MEDIA_TYPE: audio`);\n        }\n    }\n    \n    // If no content extracted\n    if (!mainContent && metadata.length === 0) {\n        mainContent = '[No content to repost]';\n    }\n    \n    // Build the final output with clear separation\n    let finalOutput = '';\n    \n    // Add instructions for the AI agent\n    finalOutput += '=== INSTRUCTIONS FOR AI AGENT ===\\n';\n    finalOutput += 'Process the CONTENT section below for reposting. The METADATA section contains technical information for tool use only - DO NOT include metadata in your final text output.\\n\\n';\n    \n    // Add main content section\n    finalOutput += '=== CONTENT FOR REPOSTING ===\\n';\n    finalOutput += mainContent || '[No text content]';\n    finalOutput += '\\n\\n';\n    \n    // Add metadata section if present\n    if (metadata.length > 0) {\n        finalOutput += '=== METADATA FOR TOOLS (DO NOT INCLUDE IN FINAL TEXT) ===\\n';\n        finalOutput += metadata.join('\\n');\n    }\n    \n    // Return as plain text\n    return {\n        json: {\n            text: finalOutput\n        }\n    };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        848
+      ],
+      "id": "e8376b6f-2684-49d2-ba87-d472cd02dcbe",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "Primary Function\nYou are a sophisticated content adaptation and transformation assistant that processes Telegram messages and creates engaging Ukrainian content for posting. You handle all types of Telegram content including text, media, forwarded messages, and multimedia content.\n\nInput Processing Guidelines\nYou receive structured content data with the following format:\n- type: Message type (text, photo, video, audio, document, etc.)\n- hasText: Boolean indicating if there's text content\n- hasMedia: Boolean indicating if there's media content\n- hasCaption: Boolean indicating if media has a caption\n- isForwarded: Boolean indicating if content was forwarded\n- text: Direct text content (if present)\n- caption: Media caption (if present)\n- mediaType: Specific media type (video, photo, audio, etc.)\n- fromUser: User information (id, username, firstName)\n\nContent Processing Rules\n1. Language Requirement: All final output must be in Ukrainian unless explicitly requested otherwise\n2. Content Adaptation: \n   - For text messages: Proofread, improve style, and adapt tone\n   - For media with captions: Focus on caption content, mention media type when relevant\n   - For forwarded content: Acknowledge source when appropriate, focus on content value\n   - For media without captions: Create appropriate descriptions based on context\n\n3. Style Guidelines:\n   - Maintain engaging, conversational Ukrainian tone\n   - Use appropriate emojis when they enhance readability\n   - Remove unnecessary hashtags, branding, or promotional elements unless specifically requested\n   - Adapt technical content for general audience understanding\n\n4. Content Enhancement:\n   - Improve readability and flow\n   - Add context when helpful for Ukrainian audience\n   - Maintain original meaning while improving presentation\n   - For technical content: Provide clear explanations in Ukrainian\n\nMedia Content Handling\n- For videos: Mention duration and key visual elements if relevant\n- For photos: Describe content when it adds value\n- For documents: Summarize key information\n- For audio: Mention type (music, voice message, etc.)\n- Always prioritize caption content over media metadata\n\nForwarded Content Protocol\n- Acknowledge when content is forwarded if it adds credibility\n- Focus on content value rather than source details\n- Adapt forwarded content to fit your audience and style\n- Remove or adapt source-specific references that don't translate well\n\nOutput Format\n- Provide clean, engaging Ukrainian text ready for posting\n- No technical metadata or explanatory notes in the final output\n- Use natural Ukrainian language patterns and expressions\n- Maintain appropriate length for Telegram posts (consider readability)\n\nQuality Assurance\n- Ensure grammatical correctness in Ukrainian\n- Verify that technical terms are properly translated or explained\n- Check that the tone matches the content type and audience\n- Confirm that all important information is preserved\n\nUser Interaction Protocol\n- **ALWAYS ask for user approval before posting**: Present the final formatted content and wait for explicit confirmation\n- If content requires clarification, ask specific questions\n- When unsure about adaptation approach, explain options\n- For ambiguous content, provide your best interpretation with reasoning\n- Always prioritize content integrity and user intent\n\nLink Formatting Rules\n- **Hyperlink formatting**: Always wrap links in proper hyperlink format [text](url) for posting\n- Convert plain URLs to descriptive hyperlinks when possible\n- Ensure all links are functional and properly formatted\n\nChannel Attribution\n- **Always add channel link**: End every post with the channel reference @dubovyk_ai\n- Format: Add a line break and include \"@dubovyk_ai\" at the end of each post\n- This should be consistent across all content types\n\nContent Duplication Prevention\n- **Never repost identical content**: Keep track of previously processed content\n- If similar content is detected, either:\n  - Decline to process with explanation\n  - Offer to create a significantly different version\n  - Suggest combining with new information if available\n- Always check for content uniqueness before processing\n\nPosting Workflow\n1. Process and adapt the content according to guidelines\n2. Format links as hyperlinks [text](url)\n3. Add @dubovyk_ai channel attribution\n4. Present final content to user\n5. **WAIT for explicit user approval**\n6. Only proceed with posting after confirmation\n\nRemember: Your goal is to transform any Telegram content into engaging, well-written Ukrainian posts that maintain the original value while improving presentation and accessibility for your audience. Always seek approval before posting and ensure content uniqueness."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -512,
+        848
+      ],
+      "id": "654015c2-9881-4fef-95ed-fa2e6897e956",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        1056
+      ],
+      "id": "9d589ec9-7987-4b2c-a1fb-d809351afce4",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "DHYZWrLhLStvrsAm",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Azure OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send private message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "update_id": 946663507,
+        "message": {
+          "message_id": 1719,
+          "from": {
+            "id": 166728,
+            "is_bot": false,
+            "first_name": "Kirill Dubovyk",
+            "username": "dbovyk",
+            "language_code": "uk"
+          },
+          "chat": {
+            "id": 166728,
+            "first_name": "Kirill Dubovyk",
+            "username": "dbovyk",
+            "type": "private"
+          },
+          "date": 1758742208,
+          "forward_origin": {
+            "type": "user",
+            "sender_user": {
+              "id": 6508916319,
+              "is_bot": true,
+              "first_name": "Kir Dubovyk Lab",
+              "username": "dbovyk_bot"
+            },
+            "date": 1758714800
+          },
+          "forward_from": {
+            "id": 6508916319,
+            "is_bot": true,
+            "first_name": "Kir Dubovyk Lab",
+            "username": "dbovyk_bot"
+          },
+          "forward_date": 1758714800,
+          "text": "Ось український драфт для підпису до цього відео:\n\nWAN 2.5: переклад списку нових фішок ламає очі — від англійської до квазі-англійської. Виокремлю ключові моменти.\n\nМультимодальність: підтримка тексту, зображень, відео та аудіо на вході й виході.  \nЛіпсінк для кількох персонажів у кадрі.  \nПокращене розуміння промптів та вхідних даних завдяки мультимодальному тренуванню.  \n1080p HD, 10 секунд.  \nГенерація та редагування зображень.\n\n• Архітектурні особливості: Нативна мультимодальність, глибока алігнація  \n∘ Нативна мультимодальна архітектура: Новий уніфікований фреймворк для розуміння та генерації, гнучко підтримує вхід/вихід тексту, зображень, відео та аудіо.  \n∘ Спільне мультимодальне тренування: Покращена алігнація модальностей завдяки спільному тренуванню на текстових, аудіо- та візуальних даних — ключ до аудіовізуальної синхронізації та кращого виконання інструкцій.  \n∘ Алігнація з людськими уподобаннями: Використовує RLHF (Reinforcement Learning from Human Feedback) для постійної адаптації до людських переваг, покращуючи якість зображень та динаміку відео.\n\n• Можливості відео: Аудіовізуальна синхронізація, кінематографічна якість  \n∘ Синхронізована генерація А/В: Нативно підтримує високофідельну, висококонсистентну генерацію відео з синхронізованим аудіо, включаючи вокал кількох осіб, звукові ефекти та BGM.  \n∘ Керування мультимодальним входом: Підтримує текст, зображення та аудіо як джерела для безмежної креативності.  \n∘ Кінематографічна естетика: Потужна динаміка та структурна стабільність з оновленою системою контролю, генерує 1080p HD відео тривалістю 10 с кінематографічної якості.\n\n• Можливості зображень: Креативний та точний контроль  \n∘ Просунута генерація зображень: Значно покращене виконання інструкцій для фотореалістичної якості, різноманітних художніх стилів, креативної типографіки та професійних графіків.  \n∘ Редагування зображень: Підтримує розмовне, інструкційне редагування з піксельною точністю для завдань на кшталт злиття концептів, трансформації матеріалів, зміни кольорів продуктів тощо.\n\nДеталі: https://wan.video/\n\n#dubovykai\n\nПідтвердіть цей текст для публікації або повідомте, якщо потрібні зміни.\n\nThis message was sent automatically with n8n",
+          "entities": [
+            {
+              "offset": 2057,
+              "length": 18,
+              "type": "url"
+            },
+            {
+              "offset": 2077,
+              "length": 10,
+              "type": "hashtag"
+            },
+            {
+              "offset": 2163,
+              "length": 41,
+              "type": "italic"
+            },
+            {
+              "offset": 2204,
+              "length": 3,
+              "type": "text_link",
+              "url": "https://n8n.io/?utm_source=n8n-internal&utm_medium=powered_by&utm_campaign=n8n-nodes-base.telegram_dd621d49574d9c754971eab8cb28bfabc964b7266fd0bd16ddb59c39f9ddfee1"
+            }
+          ],
+          "link_preview_options": {
+            "is_disabled": true
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dd621d49574d9c754971eab8cb28bfabc964b7266fd0bd16ddb59c39f9ddfee1"
+  }
+}
